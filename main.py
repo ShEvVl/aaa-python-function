@@ -41,40 +41,20 @@ def print_decorator(message_template: str):
             print(f"{message_template}")
             inp_dict = func(*args, **kwargs)
 
-            def print_dict(
-                inp_dict: dict, indent: str = "", last: bool = True
-            ) -> None:
-                """Функция понятного отображения информации с отступами и
-                линиями.
-                Args:
-                    d (dict): передаваемый словарь
-                    indent (str): определяет отступы для вывода,
-                    по умолчанию "".
-                    last (bool): контролирует вид линий, по умолчанию True.
-                """
-                branch = "" if last else "├─ "
-                for key, value in inp_dict.items():
-                    if isinstance(value, (dict, list)):
-                        print(indent + branch + key + ":")
-                        if isinstance(value, dict):
-                            print_dict(
-                                value,
-                                indent + ("    " if last else "│   "),
-                                last=False,
+            for key, value in inp_dict.items():
+                print(key + ":")
+                for subkey, subvalue in value.items():
+                    if not isinstance(subvalue, list):
+                        print("  ├─ ", subkey + ":", subvalue)
+                    elif isinstance(subvalue, list):
+                        print("  ", subkey + ":")
+                        for i, item in enumerate(subvalue):
+                            is_last_item = i == len(subvalue) - 1
+                            print(
+                                "    └─ " if is_last_item else "    ├─ ",
+                                item,
                             )
-                        elif isinstance(value, list):
-                            for i, item in enumerate(value):
-                                is_last_item = i == len(value) - 1
-                                print(
-                                    indent
-                                    + ("    " if last else "│   ")
-                                    + ("└─ " if is_last_item else "├─ ")
-                                    + item
-                                )
-                    else:
-                        print(indent + branch + key + ": ", value)
 
-            print_dict(inp_dict)
             return inp_dict
 
         return wrapper
@@ -117,18 +97,20 @@ def analyze_department_data(data: dict) -> dict:
     """
     department_info: dict = {}
     salary_info: dict = {}
-
-    for _, department, _, _, _, salary in data[1:]:
+    for i, (_, department, _, _, _, salary) in enumerate(data[1:]):
         if department not in department_info:
             department_info[department] = {
                 "Численность": 0,
-                "Средняя ЗП": 0,
+                "Средняя ЗП": [],
                 "Вилка ЗП": "",
             }
 
         department_info[department]["Численность"] = (
             department_info[department].get("Численность", 0) + 1
         )
+
+        department_info[department]["Средняя ЗП"].append(salary)
+
         salary = int(salary)
 
         if department not in salary_info:
@@ -145,13 +127,14 @@ def analyze_department_data(data: dict) -> dict:
 
         min_salary = salary_info[department]["Мин. ЗП"]
         max_salary = salary_info[department]["Макс. ЗП"]
-
-        department_info[department]["Средняя ЗП"] = round(
-            (min_salary + max_salary) / 2
-        )
         department_info[department][
             "Вилка ЗП"
         ] = f"{min_salary} - {max_salary}"
+
+    for k in department_info.keys():
+        n, z = list(department_info[k].values())[:2]
+        mean = round(sum(list(map(int, z))) / n)
+        department_info[k]["Средняя ЗП"] = mean
 
     return department_info
 
